@@ -24,18 +24,52 @@ namespace SimpleCapitalism
     public partial class Form1 : Form
     {
         public static int NCompany = 40;
-        public static int NAgent = 1000;
+        public static int NAgent = 2000;
 
         public static Random r = new Random(DateTime.Now.Millisecond);
 
         public static List<Company> market = new List<Company>();
-        
+        public static List<Agent> agents = new List<Agent>();
+
+        public static void AddShareholder(Company c, Agent a)
+        {
+            //Add agent to company stock holders
+            c.investors.Add(a);
+            //Add company agent inventments
+            a.investments.Add(c);
+        }
+
+        public static void RemoveShareholder(Company c, Agent a)
+        {
+            //Remove agent to company stock holders
+            c.investors.Remove(a);
+            //Remove company agent inventments
+            a.investments.Remove(c);
+        }
+
+        public static double AgentStarved(Agent a)
+        {
+            //remove from staff
+            a.employer.staff.Remove(a);
+            //remove shareholdings
+            double valueestate = 0; 
+            a.investments.ForEach(i => {
+                valueestate += i.cost;
+                RemoveShareholder(i, a);
+            });
+            //decease agent
+            agents.Remove(a);
+            return valueestate;
+        }
+
         public Form1()
         {
             InitializeComponent();
 
             chart1.ChartAreas[0].AxisY.Maximum = 100;
             chart1.ChartAreas[0].AxisY.Minimum = 0;
+            chart1.ChartAreas[0].AxisX.MajorGrid.LineWidth = 0;
+            chart1.ChartAreas[0].AxisY.MajorGrid.LineWidth = 0;
 
             for (int i = 0; i < NCompany; i++)
             {
@@ -46,13 +80,17 @@ namespace SimpleCapitalism
 
             for (int i=0;i<NAgent;i++)
             {
-                Agent a = new Agent() { };
-                //everyone works
                 int idx = r.Next(market.Count() - 1);
+                Agent a = new Agent() {
+                    employer = market[idx],
+                    cash = 10
+                };
+                //everyone has an employer (even capitalists)
                 market[idx].staff.Add(a);
+                agents.Add(a);
             }
 
-            //timer1.Start();
+            timer1.Start();
 
         }
 
@@ -64,7 +102,52 @@ namespace SimpleCapitalism
 
             processing = true;
 
-            market.ForEach(c => c.Period(market));
+            Tick();
+
+            //if (InvokeRequired)
+           // {
+             //   this.Invoke(new Action(() => Tick() ));
+                //processing = false;
+            //}
+
+        }
+
+        void Tick() {
+            //Do company accounts (pay dividends and salaries)
+            market.ForEach(c => c.Accounts(market));
+
+            //buy shares with salaries
+            agents.ForEach(i => i.BuyShares(market));
+
+
+            //Subsistence
+            //market.ForEach(c => c.Work() );
+
+            /* Total cash spent on subsistence this round
+             * A company cannot extract this frpom its own staff, it sells to everyone else
+             * Avoid complexity of this by assuming everyone roughly shoulders the cost
+             */
+             
+            double liquidity = 0, sales;
+            agents.ForEach(a =>
+            {
+                if ((sales = a.PayForSubsistence()) < 0)
+                {
+                    //Agent Starved
+                    liquidity += AgentStarved(a);
+                    liquidity -= 1 - sales;     // - 1-cash (is amount they had before --)
+                }
+                else
+                {
+                    liquidity += sales;
+                }
+            });
+
+            //Companies would have recieved this in proportion to what they sold which is proportion of employees.
+            double liquidityperagent = liquidity / agents.Count();
+
+            market.ForEach(c => c.cash += liquidityperagent * c.staff.Count());
+            //this replaces the work step in previous model.
 
             //Metrics
             double min = 1E8;
@@ -94,10 +177,13 @@ namespace SimpleCapitalism
 
             //Display
             chart1.Series[0].Points.Clear();
+            //chart1.ChartAreas[0].AxisX.Minimum = min;
+            //chart1.ChartAreas[0].AxisX.Maximum = max;
 
-            bins.ToList().ForEach(v =>
-                chart1.Series[0].Points.AddY( v )
-            );
+            for (int i=0;i<bins.Length;i++)
+            {
+                chart1.Series[0].Points.AddY(bins[i]);
+            }
 
             processing = false;
 
@@ -105,7 +191,7 @@ namespace SimpleCapitalism
 
         private void Form1_KeyDown(object sender, KeyEventArgs e)
         {
-            timer1.Start();
+            //timer1.Start();
         }
     }
 
@@ -122,7 +208,7 @@ namespace SimpleCapitalism
 
         public double cash = 0;
 
-        public void Period(List<Company> market)
+        public void Accounts(List<Company> market)
         {
             double dividend = cash * dividendperc;
             double salary = cash - dividend;
@@ -134,28 +220,16 @@ namespace SimpleCapitalism
             investors.ForEach(i => i.cash += dividendea );
             staff.ForEach(i => i.cash += salaryea );
 
-            //work
+        }
+
+        public void Work()
+        {
+            //If staff generate work and this is able to be sold at 1
             staff.ForEach(i => this.cash += i.work);
-
-            //buy shares
-            staff.ForEach(i => i.BuyShares(market) );
-
-        }
-
-        public static void AddShareholder(Company c, Agent a)
-        {
-            //Add agent to company stock holders
-            c.investors.Add(a);
-            //Add company agent inventments
-            a.investments.Add(c);
-        }
-
-        public static void RemoveShareholder(Company c, Agent a)
-        {
-            //Remove agent to company stock holders
-            c.investors.Remove(a);
-            //Remove company agent inventments
-            a.investments.Remove(c);
+            //In reality the work must be sold, which means someone must cough up. So deduct from the population,
+            //This is farming, so no food = dead.
+            //Sales is a relationship with rest of population, so this must be done
+            //outside the company. It is now a global function.
         }
 
     }
@@ -165,12 +239,22 @@ namespace SimpleCapitalism
         public double cash = 0;
         public double work = 1;
         public List<Company> investments = new List<Company>();
+        public Company employer = null;
 
         public double Worth()
         {
             double total = cash;
             investments.ForEach(i => total += i.cost);
             return total;
+        }
+
+        //This provides the liquidity for the next round.
+        //An agent may die if they can't afford subsistence.
+        //Previous model took subsistence from wages.
+        public double PayForSubsistence()
+        {
+            --cash;
+            return (cash < 0) ? cash : 1;
         }
 
         public void BuyShares(List<Company> companies) {
@@ -185,23 +269,24 @@ namespace SimpleCapitalism
                 {
                     //can afford
                     cash += investments[0].cost;            //sell
-                    Company.RemoveShareholder(investments[0], this);
+                    Form1.RemoveShareholder(investments[0], this);
 
                     cash -= companies[idx].cost;               //buy
-                    Company.AddShareholder(companies[idx], this);
+                    Form1.AddShareholder(companies[idx], this);
                 }
             }
 
-            //while (true)
+            //OPTIMISE THIS \/
+
+            //too slow if put all cash into shares
+            //int count = 0;
+            //while (cash > 5 && count++ < 2)
             //{
                 idx = Form1.r.Next(Form1.NCompany);
                 //unlucky you picked a stock you can't afford
-                if (companies[idx].cost > cash)
-                    
-                //break;
-
-                Company.AddShareholder(companies[idx], this);
-
+                if (companies[idx].cost > cash)         //need to pay for subsistence
+                    return;
+                Form1.AddShareholder(companies[idx], this);
                 cash -= companies[idx].cost;
             //}
 
