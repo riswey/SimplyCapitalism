@@ -62,11 +62,12 @@ namespace SimpleCapitalism
         public static double AgentStarved(Agent a)
         {
             //actually we should sell stock and only be removed when 0 stock!
+            //also could borrow from a company, and pay %of debt. this is how money growth really created!
+            double valueestate = a.cash;
 
             //remove from staff
             a.employer.staff.Remove(a);
             //remove shareholdings
-            double valueestate = 0;
             foreach(Company c in a.investments.ToList() )
             {
                 valueestate += RemoveShareholder(c, a);
@@ -165,11 +166,11 @@ namespace SimpleCapitalism
             double liquidity = 0, sales;
             foreach(Agent a in agents.ToList())
             {
-                if ((sales = a.PayForSubsistence(numGrowth.Value)) < 0)
+                sales = a.PayForSubsistence(numGrowth.Value);
+                if (sales == 0)
                 {
                     //Agent Starved
                     liquidity += AgentStarved(a);
-                    liquidity += 1 - sales;     // - 1-cash (is amount they had before --)
                 }
                 else
                 {
@@ -355,7 +356,14 @@ namespace SimpleCapitalism
             //no growth then all salary come from sales.
             //if all growth then salary is new printed cash
             cash -= (1 - (double)growth);
-            return (cash < 0) ? cash : 1;
+            if (cash < 0)
+            {
+                //can't pay
+                cash += (1 - (double)growth);
+                return 0;
+            }
+
+            return 1;
         }
 
         public void BuyShares(List<Company> companies) {
