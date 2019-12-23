@@ -65,6 +65,7 @@ namespace SimpleCapitalism
             //also could borrow from a company, and pay %of debt. this is how money growth really created!
             double valueestate = a.cash;
 
+
             //remove from staff
             a.employer.staff.Remove(a);
             //remove shareholdings
@@ -123,6 +124,9 @@ namespace SimpleCapitalism
             for(int i=0; i<numCapitalists.Value;i++)
             {
                 agents[i].capitalist = true;
+                //give capitalists a 10x head start rather than stopping non-capitalists trading
+                if (tentimescStart.Checked)
+                    agents[i].cash *= 2;
             }
         }
 
@@ -144,13 +148,13 @@ namespace SimpleCapitalism
             double mworth = agents.Sum(a => a.Worth());
             mworth += companies.Sum(c => c.cash);
 
-            marketCap.Text = mworth.ToString();
+            marketCap.Text = Math.Round(mworth,1).ToString();
             
             //Do company accounts (pay dividends and salaries)
             companies.ForEach(c => c.Accounts(companies));
 
             //buy shares with salaries
-            agents.ForEach(i => i.BuyShares(companies));
+            agents.ForEach(i => i.BuyShares(companies, tentimescStart.Checked));
 
             
             //Subsistence
@@ -366,9 +370,11 @@ namespace SimpleCapitalism
             return 1;
         }
 
-        public void BuyShares(List<Company> companies) {
+        public void BuyShares(List<Company> companies, bool tentimesStartState) {
 
-            if (!capitalist) return;
+            //tentimesStart state changes behaviour to just give capitalists a 10x head start rather than exclude non-capitalists
+
+            if (!capitalist && !tentimesStartState) return;
 
             int idx;
 

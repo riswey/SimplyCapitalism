@@ -56,6 +56,7 @@
             this.label8 = new System.Windows.Forms.Label();
             this.numStartCash = new System.Windows.Forms.NumericUpDown();
             this.chkRandom = new System.Windows.Forms.CheckBox();
+            this.tentimescStart = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.chart1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dividendperc)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.chart2)).BeginInit();
@@ -305,18 +306,29 @@
             // chkRandom
             // 
             this.chkRandom.AutoSize = true;
-            this.chkRandom.Location = new System.Drawing.Point(737, 125);
+            this.chkRandom.Location = new System.Drawing.Point(727, 125);
             this.chkRandom.Name = "chkRandom";
             this.chkRandom.Size = new System.Drawing.Size(61, 17);
             this.chkRandom.TabIndex = 23;
             this.chkRandom.Text = "random";
             this.chkRandom.UseVisualStyleBackColor = true;
             // 
+            // tenpercStart
+            // 
+            this.tentimescStart.AutoSize = true;
+            this.tentimescStart.Location = new System.Drawing.Point(727, 222);
+            this.tentimescStart.Name = "tenpercStart";
+            this.tentimescStart.Size = new System.Drawing.Size(66, 17);
+            this.tentimescStart.TabIndex = 24;
+            this.tentimescStart.Text = "10x lead";
+            this.tentimescStart.UseVisualStyleBackColor = true;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 531);
+            this.Controls.Add(this.tentimescStart);
             this.Controls.Add(this.chkRandom);
             this.Controls.Add(this.label8);
             this.Controls.Add(this.numStartCash);
@@ -379,6 +391,7 @@
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.NumericUpDown numStartCash;
         private System.Windows.Forms.CheckBox chkRandom;
+        private System.Windows.Forms.CheckBox tentimescStart;
     }
 }
 
